@@ -92,9 +92,11 @@ func (m *PostgresDBRepo) OneMovie(id int) (*models.Movie, error) {
 		return nil, err
 	}
 
-	query = `select g.id, g.genre from movies_genres mg left join genres g on (mg.genres_id = g.id)
-		where mg.movie_id $1
-		order by g.genre`
+	query = `select g.id, g.genre 
+				from movies_genres mg 
+				    left join genres g on (mg.genres_id = g.id)
+				where mg.movie_id = $1
+				order by g.genre`
 
 	rows, err := m.DB.QueryContext(ctx, query, id)
 	if err != nil && err != sql.ErrNoRows {
@@ -150,7 +152,7 @@ func (m *PostgresDBRepo) OneMovieForEdit(id int) (*models.Movie, []*models.Genre
 	}
 
 	query = `select g.id, g.genre from movies_genres mg left join genres g on (mg.genres_id = g.id)
-		where mg.movie_id $1
+		where mg.movie_id = $1
 		order by g.genre`
 
 	rows, err := m.DB.QueryContext(ctx, query, id)

@@ -1,12 +1,13 @@
 package main
 
 import (
+	"backend/internal/models"
 	"errors"
+	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 	"strconv"
 
-	"github.com/golang-jwt/jwt"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -14,11 +15,11 @@ func (app *application) Home(w http.ResponseWriter, r *http.Request) {
 	//fmt.Fprintf(w, "Hello, world from %s", app.Domain)
 
 	var payload = struct {
-		Status string `json:"status"`
+		Status  string `json:"status"`
 		Message string `json:"message"`
 		Version string `json:"version"`
-	} {
-		Status: "active",
+	}{
+		Status:  "active",
 		Message: "Go Movies up and running",
 		Version: "1.0.0",
 	}
@@ -41,7 +42,7 @@ func (app *application) AllMovies(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.errorJSON(w, err)
-		return 
+		return
 	}
 
 	// out, err := json.Marshal(movies)
@@ -59,7 +60,7 @@ func (app *application) AllMovies(w http.ResponseWriter, r *http.Request) {
 func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	// read json payload
 	var requestPayload struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
@@ -80,14 +81,14 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	valid, err := user.PasswordMatches(requestPayload.Password)
 	if err != nil || !valid {
 		app.errorJSON(w, errors.New("invalid credentials"), http.StatusBadRequest)
-		return 
+		return
 	}
 
 	// create a jwt user
-	u := jwtUser {
-		ID: user.ID,
+	u := jwtUser{
+		ID:        user.ID,
 		FirstName: user.FirstName,
-		LastName: user.LastName,
+		LastName:  user.LastName,
 	}
 
 	// generate tokens
@@ -113,7 +114,7 @@ func (app *application) refreshToken(w http.ResponseWriter, r *http.Request) {
 			refreshToken := cookie.Value
 
 			// parse the token to get the claims
-			_, err := jwt.ParseWithClaims(refreshToken, claims, func (token *jwt.Token) (interface{}, error) {
+			_, err := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
 				return []byte(app.JWTSecret), nil
 			})
 			if err != nil {
@@ -135,9 +136,9 @@ func (app *application) refreshToken(w http.ResponseWriter, r *http.Request) {
 			}
 
 			u := jwtUser{
-				ID: user.ID,
+				ID:        user.ID,
 				FirstName: user.FirstName,
-				LastName: user.LastName,
+				LastName:  user.LastName,
 			}
 
 			tokenParis, err := app.auth.GenerateTokenPair(&u)
@@ -163,8 +164,51 @@ func (app *application) MovieCatalog(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.errorJSON(w, err)
-		return 
+		return
 	}
-	
+
 	_ = app.writeJSON(w, http.StatusOK, movies)
+}
+
+func (app *application) GetMovie(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	movieID, err := strconv.Atoi(id)
+	if err != nil {
+		app.errorJSON(w, errors.New("invalid movie id"), http.StatusBadRequest)
+		return
+	}
+
+	movie, err := app.DB.OneMovie(movieID)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusNotFound)
+		return
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, movie)
+}
+
+func (app *application) MovieForEdit(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	movieID, err := strconv.Atoi(id)
+	if err != nil {
+		app.errorJSON(w, errors.New("invalid movie id"), http.StatusBadRequest)
+		return
+	}
+
+	movie, genres, err := app.DB.OneMovieForEdit(movieID)
+
+	if err != nil {
+		app.errorJSON(w, err, http.StatusNotFound)
+	}
+
+	var payload = struct {
+		Movie  *models.Movie   `json:"movie"`
+		Genres []*models.Genre `json:"genres"`
+	}{
+		movie,
+		genres,
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, payload)
+
 }
