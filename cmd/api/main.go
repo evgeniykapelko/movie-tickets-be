@@ -13,33 +13,22 @@ import (
 const port = 8088
 
 type application struct {
-	DSN    string
-	Domain string
-	DB repository.DatabaseRepo
-	auth Auth
-	JWTSecret string
-	JWTIssuer string
-	JWTAudience string
+	DSN          string
+	Domain       string
+	DB           repository.DatabaseRepo
+	auth         Auth
+	JWTSecret    string
+	JWTIssuer    string
+	JWTAudience  string
 	CookieDomain string
 }
 
-/**
-type Movie struct {
-	ID int `json:"id"`
-	Title string `json:"title"`
-	ReleaseDate time.Time `json:"release_date"`
-	RunTime int `json:"runtime"`
-	MPAARating string `json:"mpaa_rating"`
-	Description string `json:"description"`
-	Image string `json:"image"`
-	CreatedAt time.Time `json:"-"`
-	UpdateAt time.Time `json:"-"`
-}
-*/
 func main() {
+	// set application config
 	var app application
 
-	flag.StringVar(&app.DSN, "dsn", "host=localhost port=5432 user=postgres password=postgres dbname=movies sslmode=disable timezone=UTC connect_timeout=5", "Postgrase connection string")
+	// read from command line
+	flag.StringVar(&app.DSN, "dsn", "host=localhost port=5432 user=postgres password=postgres dbname=movies sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
 	flag.StringVar(&app.JWTSecret, "jwt-secret", "verysecret", "signing secret")
 	flag.StringVar(&app.JWTIssuer, "jwt-issuer", "example.com", "signing issuer")
 	flag.StringVar(&app.JWTAudience, "jwt-audience", "example.com", "signing audience")
@@ -47,38 +36,30 @@ func main() {
 	flag.StringVar(&app.Domain, "domain", "example.com", "domain")
 	flag.Parse()
 
+	// connect to the database
 	conn, err := app.connectToDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	app.DB = &dbrepo.PostgresDBRepo{DB: conn}
 	defer app.DB.Connection().Close()
 
 	app.auth = Auth{
-		Issuer: app.JWTIssuer,
-		Audience: app.JWTAudience,
-		Secret: app.JWTSecret,
-		TokenExpiry: time.Minute * 15,
+		Issuer:        app.JWTIssuer,
+		Audience:      app.JWTAudience,
+		Secret:        app.JWTSecret,
+		TokenExpiry:   time.Minute * 15,
 		RefreshExpiry: time.Hour * 24,
-		CookiePath: "/",
-		CookieName: "__Host-refresh_token",
-		CookieDomain: app.CookieDomain,
+		CookiePath:    "/",
+		CookieName:    "__Host-refresh_token",
+		CookieDomain:  app.CookieDomain,
 	}
 
 	log.Println("Starting application on port", port)
 
-	http.HandleFunc("/", app.Home)
-	address := fmt.Sprintf(":%d", port)
-
-	 err = http.ListenAndServe(address, app.routes())
-	// err := http.ListenAndServe(address, nil)
-
+	// start a web server
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), app.routes())
 	if err != nil {
-	  	log.Fatalf("failed to start server: %s", err)
-	  }
-}
-
-func (app *application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World!")
+		log.Fatal(err)
+	}
 }
