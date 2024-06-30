@@ -94,7 +94,7 @@ func (m *PostgresDBRepo) OneMovie(id int) (*models.Movie, error) {
 
 	query = `select g.id, g.genre 
 				from movies_genres mg 
-				    left join genres g on (mg.genres_id = g.id)
+				    left join genres g on (mg.genre_id = g.id)
 				where mg.movie_id = $1
 				order by g.genre`
 
@@ -151,7 +151,7 @@ func (m *PostgresDBRepo) OneMovieForEdit(id int) (*models.Movie, []*models.Genre
 		return nil, nil, err
 	}
 
-	query = `select g.id, g.genre from movies_genres mg left join genres g on (mg.genres_id = g.id)
+	query = `select g.id, g.genre from movies_genres mg left join genres g on (mg.genre_id = g.id)
 		where mg.movie_id = $1
 		order by g.genre`
 
@@ -374,6 +374,20 @@ func (m *PostgresDBRepo) UpdateMovieGenres(id int, genreIDs []int) error {
 	}
 
 	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PostgresDBRepo) DeleteMovie(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	stmt := `delete from movies where id = $1`
+
+	_, err := m.DB.ExecContext(ctx, stmt, id)
+	if err != nil {
 		return err
 	}
 

@@ -20,4 +20,6 @@ type DatabaseRepo interface {
 
 	UpdateMovieGenres(id int, genreIDs []int) error
 	UpdateMovie(movie *models.Movie) error
+
+	DeleteMovie(id int) error
 }
