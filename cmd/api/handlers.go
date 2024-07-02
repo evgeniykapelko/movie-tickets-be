@@ -396,7 +396,7 @@ func (app *application) moviesGraphQL(w http.ResponseWriter, r *http.Request) {
 	q, _ := io.ReadAll(r.Body)
 	query := string(q)
 
-	q := graph.New(movies)
+	g := graph.New(movies)
 
 	g.QueryString = query
 
